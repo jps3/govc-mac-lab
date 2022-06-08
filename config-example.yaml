@@ -1,0 +1,79 @@
+---
+govc_settings:
+    url: "vsphere.local"
+    insecure: "true"
+    host: "esxi.local"
+    ds: "/dc1/datastore/esxi-datastore1"
+    pool: "/dc1/host/esxi.local/Resources"
+    folder: "mdm-testing"
+
+vm_list:
+
+    - name: "jamf-macos12"
+      src: "macOS-12.4-21F79"
+      guest_type: "darwin21_64Guest"
+      udid: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      extra_config:
+          board-id: "Mac-BE088AF8C5EB4FA2"
+          hw.model: "iMac18,3"
+          serialNumber: "D25VxxxxJ1GQ"
+
+    - name: "jamf-macos11"
+      src: "macOS-11.6.6-20G624"
+      guest_type: "darwin20_64Guest"
+      udid: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      extra_config:
+          board-id: "Mac-F65AE981FFA204ED"
+          hw.model: "Macmini6,3"
+          serialNumber: "C07NxxxxxDY3J"
+
+    - name: "jamf-macos1015"
+      src: "macOS-10.15.7-19H15"
+      guest_type: "darwin19_64Guest"
+      udid: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      extra_config:
+          board-id: "Mac-189A3D4F975D5FFC"
+          hw.model: "MacBookPro11,1"
+          serialNumber: "C02NxxxxG3QJ"
+      disabled: true
+
+    - name: "jamf-macos1014"
+      src: "macOS-10.14.6-18G103"
+      guest_type: "darwin18_64Guest"
+      udid: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      extra_config:
+          board-id: "Mac-2BD1B31983FE1663"
+          hw.model: "MacBookPro11,3"
+          serialNumber: "C02NxxxxG3QP"
+      disabled: true
+
+#  ┏┓╻┏━┓╺┳╸┏━╸┏━┓
+#  ┃┗┫┃ ┃ ┃ ┣╸ ┗━┓
+#  ╹ ╹┗━┛ ╹ ┗━╸┗━┛
+#  - name: "$src--$serialNumber"
+#    src: "$productName-$productVersion-$buildVersion"
+#    # See also '/usr/bin/sw_vers -h' command
+#
+#  See GuestOsIdentifier enum in API documentation:
+#    https://bit.ly/3Md7qec
+#  TL;DR the "MM" is typically the major version number of kernel
+#  as seen in 'usrc -r' output or the first integer characters
+#  in 'sw_vers -buildVersion'. Not every version of macOS has been
+#  64-bit but from 10.15 onward were 64-bit only. (See URL above
+#  for enumeration/list of valid strings.)
+#  Ex. macOS 12.x Monterey is "darwin21_64Guest"
+#
+#  When mimicking real hardware such as when testing
+#  Apple ADE in MDM environment (ex. Jamf PreStages)
+#  to ensure you are not creating a new Computer record
+#  on each VM instantiation you will need to ensure that
+#  both the Hardware UUID (as seen in System Information
+#  Hardware section or 'system_profiler SPHardwareDataType'
+#  command output, and aka "UDID" in Jamf Computer record
+#  under Inventory > Hardare tab)
+#  Ex. 3F4297BB-7AD1-A17E-555F-85157AB56AA4
+#
+# Reference:
+# 'board-id' and 'hw.model' can also be looked up at:
+#   https://bit.ly/3MzB1Pt
+#

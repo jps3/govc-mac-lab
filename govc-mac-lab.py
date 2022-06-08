@@ -10,6 +10,7 @@ import yaml
 
 from pprint import pp, pformat
 
+DEBUG = False
 CONFIG_FILE = 'config.yaml'
 
 
@@ -34,14 +35,8 @@ def do_govc_cmd(cmd="about", cmd_args=None):
 		shell=False,
 		bufsize=-1, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(out, err) = proc.communicate()
-	if err:
-		try:
-			fault = json.loads(err)
-			if fault['Fault']:
-				print(u'Error   : "{}"\nQuitting.'.format(fault['LocalizedMessage']))
-			sys.exit(1)
-		except json.decoder.JSONDecodeError:
-			print(err.decode('utf-8'), file=sys.stderr, flush=True)
+	if err and DEBUG:
+		print('{}'.format(err.decode('utf-8')), file=sys.stderr, flush=True)
 	if out != b'':
 		reply = None
 		try:
@@ -99,7 +94,7 @@ def main():
 
 		# TODO: Create clone of 'src' VM
 		#       govc vm.clone -vm="$src" -link=true -snapshot="Initial import" -on=false -folder="ade-mdm" -force=true "$name"
-		do_govc_cmd(
+		result = do_govc_cmd(
 			'vm.clone',
 			'-vm "{src}" '
 			'-link="{link}" '
@@ -107,8 +102,8 @@ def main():
 			'-on="{on}" '
 			'-folder="{folder}" '
 			'-force="{force}" '
-			'-ds={ds} '
-			'-pool={pool} '
+			'-ds="{ds}" '
+			'-pool="{pool}" '
 			'"{name}"'.format(
 				src=this_config['src'],
 				link=True,
@@ -167,17 +162,35 @@ def main():
 			do_govc_cmd('device.cdrom.add', '-vm "{vm}"'.format(vm=this_config['name']))
 		else:
 			print('Device {} found.'.format(result['Devices'][0]['Name']))
-		# TODO: Ensure ethernet connected
-		#       govc device.ls -json -vm $name \
-		#       | jq -r '.Devices|map(select(.Name|contains("ethernet")))[].Name' \
-		#       | while read -r NIC
-		#         do
-		#           govc device.connect -vm $name "$NIC"
-		#           govc vm.network.change -vm $name -net="VM Network" -net.adapter="vmxnet3" "$NIC"
-		#         done
-		#
+
+		# Ensure ethernet connected
+		#   govc device.info -json -vm $name "ethernet*"
+		#   for each device returned
+		#     govc device.connect -vm $name $device
+		#     govc vm.network.change -vm $name -net="VM Network" -net.adapter="vmxnet3" "$NIC"
+		#result = do_govc_cmd('device.info', '-vm "{vm}" "ethernet*"'.format(vm=this_config['name']))
+		# TODO: Can the primary(?) ethernet device ever be named something other than 'ethernet-0'? If not why are we trying to do this kind of discovery?
+		#print(pformat(result['Devices'][0]['Name'], width=72, indent=2), file=sys.stderr, flush=True)
+		# do_govc_cmd('device.remove', '-vm "{vm}" "ethernet-0"'.format(vm=this_config['name']))
+		# do_govc_cmd('vm.network.add',
+		# 			'-vm "{vm}" '
+		# 			'-net "{net}" '
+		# 			'-net.adapter "{net_adapter}" '
+		# 			'"ethernet-0"'.format(
+		# 				vm=this_config['name'],
+		# 				net=govc['net'],
+		# 				net_adapter=govc['net_adapter']))
+
 		# TODO: Create an initial snapshot of new linked clone
 		#       govc snapshot.create -vm "$name" "linked clone created"
+		do_govc_cmd('snapshot.create',
+					'-vm "{vm}" '
+					'-d "{desc}" '
+					'"{snapshot_name}"'.format(
+						vm=this_config['name'],
+						desc="Linked clone of {src} created".format(
+							src=this_config['src']),
+						snapshot_name="cloned-configured"))
 
 
 if __name__ == '__main__':

@@ -69,7 +69,14 @@ def main():
 			assert this_config['src'], "'src' not defined"
 			assert this_config['guest_type'], "'guest_type' not defined"
 			assert this_config['udid'], "'udid' not defined"
-		# TODO: if 'folder' defined assert it exists
+			# TODO: if 'folder' defined assert(?) it exists
+			if govc['folder']:
+				pass
+				# govc folder.info -json govc['folder'] | jq --arg name govc['folder'] '.Folders[0].Name==$name'
+				#   needs to exit with 0 and return string 'true'
+				#   (see: https://bit.ly/3xBmBdq)
+				reply = do_govc_cmd(cmd='folder.info', args='"{folder}"'.format(folder=govc['folder']))
+				assert reply['Folders'][0]['Name'] == govc['folder'], "'folder' config defined but does not exist on server"
 		except AssertionError as e:
 			print('Configuration file error: {}\nQuitting.'.format(e))
 			sys.exit(1)

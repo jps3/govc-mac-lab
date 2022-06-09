@@ -22,10 +22,10 @@ def load_config_file():
 		print(e)
 
 
-def do_govc_cmd(cmd="about", cmd_args=None):
+def do_govc_cmd(cmd="about", args=None):
 	"""
 	:param cmd:
-	:param cmd_args:
+	:param args:
 	:return:
 	"""
 	# TODO: Figure out better error handling (exit code values? unexpected out or err ouput?)

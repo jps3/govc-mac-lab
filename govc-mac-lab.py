@@ -28,7 +28,7 @@ def do_govc_cmd(cmd="about", cmd_args=None):
 	:param cmd_args:
 	:return:
 	"""
-	cmdline = "/usr/local/bin/govc {cmd} -json {args}".format(cmd=cmd, args=cmd_args)
+	cmdline = "/usr/local/bin/govc {cmd} -json {args}".format(cmd=cmd, args=args)
 	print('Command : {}'.format(cmdline))
 	proc = subprocess.Popen(
 		shlex.split(cmdline),
@@ -77,7 +77,7 @@ def main():
 
 		# assert that vm with defined name exists and has 'green' status
 		try:
-			result = do_govc_cmd('vm.info', '"{vm}"'.format(vm=this_config['src']))
+			result = do_govc_cmd(cmd='vm.info', args='"{vm}"'.format(vm=this_config['src']))
 			assert result['VirtualMachines'] is not None, "VM not found"
 			assert result['VirtualMachines'][0]['OverallStatus'] == "green", \
 				'VM "{vm}" exists but overall status is {status} (not green).'.format(
@@ -95,8 +95,8 @@ def main():
 		# TODO: Create clone of 'src' VM
 		#       govc vm.clone -vm="$src" -link=true -snapshot="Initial import" -on=false -folder="ade-mdm" -force=true "$name"
 		result = do_govc_cmd(
-			'vm.clone',
-			'-vm "{src}" '
+			cmd='vm.clone',
+			args='-vm "{src}" '
 			'-link="{link}" '
 			'-snapshot="{snapshot}" '
 			'-on="{on}" '
@@ -120,7 +120,7 @@ def main():
 		# Set guest os type for vm
 		# Enum - VirtualMachineGuestOsIdentifier(vim.vm.GuestOsDescriptor.GuestOsIdentifier)
 		# See also: https://bit.ly/3Md7qec
-		do_govc_cmd('vm.change', '-vm "{vm}" -g "{os}"'.format(
+		do_govc_cmd(cmd='vm.change', args='-vm "{vm}" -g "{os}"'.format(
 			vm=this_config['name'],
 			os=this_config['guest_type']))
 
@@ -142,7 +142,7 @@ def main():
 		# Set bios uuid (aka Apple Hardware UDID)
 		# For Apple ADE and MDM testing this must be carefully considered
 		#   (ex. Jamf uses this + serial number to track distinct Computer records)
-		do_govc_cmd('vm.change', '-vm "{vm}" -uuid "{uuid}"'.format(
+		do_govc_cmd(cmd='vm.change', args='-vm "{vm}" -uuid "{uuid}"'.format(
 			vm=this_config['name'],
 			uuid=this_config['udid']))
 		# Set vmx extra configuration parameters
@@ -150,16 +150,16 @@ def main():
 		for key, value in this_config['extra_config'].items():
 			# TODO: Ensure that a $key.reflectHost = "FALSE" set for 'board-id', 'hw.model', and 'serial.number' (actually is this even necessary for ESXi/vSphere?)
 			extra_config_args.append('-e "{key}={value}"'.format(key=key, value=value))
-		do_govc_cmd('vm.change', ' '.join(extra_config_args))
+		do_govc_cmd(cmd='vm.change', args=' '.join(extra_config_args))
 
 		# TODO: Ensure CD/DVD device exists but has no volumes configured
 		#       govc device.info -json -vm $name "cdrom*"
 		#       Note: Exits with 1 and stdout text (ex.'govc: device 'cdrom*' not found')
 		#       Note: Every time above add command run will add another cdrom, so check first!
-		result = do_govc_cmd('device.info', '-vm "{vm}" "cdrom*"'.format(vm=this_config['name']))
+		result = do_govc_cmd(cmd='device.info', args='-vm "{vm}" "cdrom*"'.format(vm=this_config['name']))
 		if not result:
 			# govc device.cdrom.add -vm $name  #=> 'cdrom-3000'
-			do_govc_cmd('device.cdrom.add', '-vm "{vm}"'.format(vm=this_config['name']))
+			do_govc_cmd(cmd='device.cdrom.add', args='-vm "{vm}"'.format(vm=this_config['name']))
 		else:
 			print('Device {} found.'.format(result['Devices'][0]['Name']))
 
@@ -183,13 +183,9 @@ def main():
 
 		# TODO: Create an initial snapshot of new linked clone
 		#       govc snapshot.create -vm "$name" "linked clone created"
-		do_govc_cmd('snapshot.create',
-					'-vm "{vm}" '
-					'-d "{desc}" '
-					'"{snapshot_name}"'.format(
+		do_govc_cmd(cmd='snapshot.create', args='-vm "{vm}" -d "{desc}" "{snapshot_name}"'.format(
 						vm=this_config['name'],
-						desc="Linked clone of {src} created".format(
-							src=this_config['src']),
+						desc="Linked clone of {src} created".format(src=this_config['src']),
 						snapshot_name="cloned-configured"))
 
 

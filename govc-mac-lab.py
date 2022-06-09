@@ -128,6 +128,7 @@ def main():
 		do_govc_cmd(cmd='vm.change', args='-vm "{vm}" -uuid "{uuid}"'.format(
 			vm=this_config['name'],
 			uuid=this_config['udid']))
+
 		# Set vmx extra configuration parameters
 		extra_config_args = ['-vm {vm}'.format(vm=this_config['name'])]
 		for key, value in this_config['extra_config'].items():

@@ -28,6 +28,8 @@ def do_govc_cmd(cmd="about", cmd_args=None):
 	:param cmd_args:
 	:return:
 	"""
+	# TODO: Figure out better error handling (exit code values? unexpected out or err ouput?)
+	#   Ex. govc folder.info -json foo #=> "govc: folder 'foo' not found" (no json, and exit value is 1)
 	cmdline = "/usr/local/bin/govc {cmd} -json {args}".format(cmd=cmd, args=args)
 	print('Command : {}'.format(cmdline))
 	proc = subprocess.Popen(
@@ -92,8 +94,7 @@ def main():
 				flush=True)
 			sys.exit(1)
 
-		# TODO: Create clone of 'src' VM
-		#       govc vm.clone -vm="$src" -link=true -snapshot="Initial import" -on=false -folder="ade-mdm" -force=true "$name"
+		# Create clone of 'src' vm
 		result = do_govc_cmd(
 			cmd='vm.clone',
 			args='-vm "{src}" '
@@ -114,7 +115,6 @@ def main():
 				ds=govc['ds'],
 				pool=govc['pool'],
 				name=this_config['name']))
-		# TODO: Fix vm.clone error: default datastore resolves to multiple instances, please specify
 		# TODO: Handle 'result' which returns empty (and value 0) on success, but JSON object with key 'Fault' on error
 
 		# Set guest os type for vm
@@ -124,24 +124,7 @@ def main():
 			vm=this_config['name'],
 			os=this_config['guest_type']))
 
-		#
-		# ╺┳┓┏━┓   ┏┓╻┏━┓╺┳╸   ┏━╸╻ ╻┏━┓┏┓╻┏━╸┏━╸   ┏┓ ┏━┓┏━┓┏━╸╻  ╻┏┓╻┏━╸   ╻ ╻┏┳┓┏━┓
-		#  ┃┃┃ ┃   ┃┗┫┃ ┃ ┃    ┃  ┣━┫┣━┫┃┗┫┃╺┓┣╸    ┣┻┓┣━┫┗━┓┣╸ ┃  ┃┃┗┫┣╸    ┃┏┛┃┃┃┗━┓
-		# ╺┻┛┗━┛   ╹ ╹┗━┛ ╹    ┗━╸╹ ╹╹ ╹╹ ╹┗━┛┗━╸   ┗━┛╹ ╹┗━┛┗━╸┗━╸╹╹ ╹┗━╸   ┗┛ ╹ ╹┗━┛
-		# ┏━┓┏┓╻╻  ╻ ╻   ┏━╸╻  ┏━┓┏┓╻┏━╸┏━┓
-		# ┃ ┃┃┗┫┃  ┗┳┛   ┃  ┃  ┃ ┃┃┗┫┣╸ ┗━┓
-		# ┗━┛╹ ╹┗━╸ ╹    ┗━╸┗━╸┗━┛╹ ╹┗━╸┗━┛
-		#
-		# IFF the VM is a clone
-		#    How to tell if it is?
-		#     - Nothing in vm.info -json output appears to indicate this
-		#      - Name? Ex. "macOS-11.6.6-20G624" vs "macOS-11.6.6-20G624--C07N50HKDY3J"
-		#      - Folder? "ade-mdm" vs "mac-lab"
-		#      - macos_src_vm (the config_data key) ends with a string like "_jamf" or "_mdm"?
-		#
-		# Set bios uuid (aka Apple Hardware UDID)
-		# For Apple ADE and MDM testing this must be carefully considered
-		#   (ex. Jamf uses this + serial number to track distinct Computer records)
+		# Set guest uuid to udid for (jamf) mdm testing
 		do_govc_cmd(cmd='vm.change', args='-vm "{vm}" -uuid "{uuid}"'.format(
 			vm=this_config['name'],
 			uuid=this_config['udid']))
@@ -152,37 +135,16 @@ def main():
 			extra_config_args.append('-e "{key}={value}"'.format(key=key, value=value))
 		do_govc_cmd(cmd='vm.change', args=' '.join(extra_config_args))
 
-		# TODO: Ensure CD/DVD device exists but has no volumes configured
-		#       govc device.info -json -vm $name "cdrom*"
-		#       Note: Exits with 1 and stdout text (ex.'govc: device 'cdrom*' not found')
-		#       Note: Every time above add command run will add another cdrom, so check first!
+		# Ensure CD/DVD device exists
 		result = do_govc_cmd(cmd='device.info', args='-vm "{vm}" "cdrom*"'.format(vm=this_config['name']))
 		if not result:
 			# govc device.cdrom.add -vm $name  #=> 'cdrom-3000'
 			do_govc_cmd(cmd='device.cdrom.add', args='-vm "{vm}"'.format(vm=this_config['name']))
 		else:
 			print('Device {} found.'.format(result['Devices'][0]['Name']))
+		# TODO: Ensure no ISOs/volumes/etc configured for cdrom
 
-		# Ensure ethernet connected
-		#   govc device.info -json -vm $name "ethernet*"
-		#   for each device returned
-		#     govc device.connect -vm $name $device
-		#     govc vm.network.change -vm $name -net="VM Network" -net.adapter="vmxnet3" "$NIC"
-		#result = do_govc_cmd('device.info', '-vm "{vm}" "ethernet*"'.format(vm=this_config['name']))
-		# TODO: Can the primary(?) ethernet device ever be named something other than 'ethernet-0'? If not why are we trying to do this kind of discovery?
-		#print(pformat(result['Devices'][0]['Name'], width=72, indent=2), file=sys.stderr, flush=True)
-		# do_govc_cmd('device.remove', '-vm "{vm}" "ethernet-0"'.format(vm=this_config['name']))
-		# do_govc_cmd('vm.network.add',
-		# 			'-vm "{vm}" '
-		# 			'-net "{net}" '
-		# 			'-net.adapter "{net_adapter}" '
-		# 			'"ethernet-0"'.format(
-		# 				vm=this_config['name'],
-		# 				net=govc['net'],
-		# 				net_adapter=govc['net_adapter']))
-
-		# TODO: Create an initial snapshot of new linked clone
-		#       govc snapshot.create -vm "$name" "linked clone created"
+		# Create an initial snapshot of new linked clone
 		do_govc_cmd(cmd='snapshot.create', args='-vm "{vm}" -d "{desc}" "{snapshot_name}"'.format(
 						vm=this_config['name'],
 						desc="Linked clone of {src} created".format(src=this_config['src']),

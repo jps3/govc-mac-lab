@@ -57,7 +57,9 @@ def main():
 	try:
 		reply = do_govc_cmd(cmd='session.ls')
 		if reply and reply['CurrentSession']:
-			print('Session key found for: {}'.format(reply['CurrentSession']['UserName']))
+			print('Session found for:\n    {user}\n    {time}\n'.format(
+				user=reply['CurrentSession']['UserName'],
+				time=reply['CurrentSession']['LastActiveTime']))
 	except Exception:
 		raise
 

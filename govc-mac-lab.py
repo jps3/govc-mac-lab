@@ -63,20 +63,25 @@ def main():
 	except Exception:
 		raise
 
+	try:
+		if govc['folder']:
+			pass
+			# govc folder.info -json govc['folder'] | jq --arg name govc['folder'] '.Folders[0].Name==$name'
+			#   needs to exit with 0 and return string 'true'
+			#   (see: https://bit.ly/3xBmBdq)
+			reply = do_govc_cmd(cmd='folder.info', args='"{folder}"'.format(folder=govc['folder']))
+			assert reply['Folders'][0]['Name'] == govc['folder'], "'folder' config defined but does not exist on server"
+	except AssertionError as e:
+		print('Configuration file error: {}\nQuitting.'.format(e))
+		sys.exit(1)
+
 	for this_config in config_data['vm_list']:
 		try:
 			assert this_config['name'], "'name' not defined"
 			assert this_config['src'], "'src' not defined"
 			assert this_config['guest_type'], "'guest_type' not defined"
 			assert this_config['udid'], "'udid' not defined"
-			# TODO: if 'folder' defined assert(?) it exists
-			if govc['folder']:
-				pass
-				# govc folder.info -json govc['folder'] | jq --arg name govc['folder'] '.Folders[0].Name==$name'
-				#   needs to exit with 0 and return string 'true'
-				#   (see: https://bit.ly/3xBmBdq)
-				reply = do_govc_cmd(cmd='folder.info', args='"{folder}"'.format(folder=govc['folder']))
-				assert reply['Folders'][0]['Name'] == govc['folder'], "'folder' config defined but does not exist on server"
+			# TODO: Verify snapshot 'Initial import' exists
 		except AssertionError as e:
 			print('Configuration file error: {}\nQuitting.'.format(e))
 			sys.exit(1)
@@ -125,6 +130,7 @@ def main():
 				pool=govc['pool'],
 				name=this_config['name']))
 		# TODO: Handle 'result' which returns empty (and value 0) on success, but JSON object with key 'Fault' on error
+		# TODO: Verify vm was actually cloned -or- better error/result handling in do_govc_cmd()
 
 		# Set guest os type for vm
 		# Enum - VirtualMachineGuestOsIdentifier(vim.vm.GuestOsDescriptor.GuestOsIdentifier)
@@ -173,19 +179,22 @@ This program assumes that you have already built the base macOS VMs properly, up
 	overview = """\
 This program takes an existing, clean-installed macOS VM, performed with virtual ethernet device(s) disconnected, and which was shut down before Install Assistant was run. It loads the YAML configuration file, then for _each_ defined source macOS VM ('src'):
 	"""
-	steps = """
-0. Checks whether a VM named $name [in folder $folder? (which is not defined as a configuration key)] exists, and if so then what? Stop and ask? Skip?
-1. Checks that 'name', 'src', and 'guest_type' are defined at a minimum
-2. Verifies that 'src' VM exists # TODO: determine how deeply is this checked
-3. Ensures that 'src' VM’s defined guest os identifier is set in vSphere
-4. … 
-	"""
-	# width = shutil.get_terminal_size().columns
-	# print(banner)
-	# print(textwrap.fill(disclaimer, width=width, expand_tabs=False))
-	# print('')
-	# print(textwrap.fill(overview, width=width, expand_tabs=False))
-	# print(steps)
-	# if input("Do You Want To Continue? [yes/N] ") == "yes":
-	# 	main()
-	main()
+	steps = [
+		"Checks whether a VM named $name [in folder $folder? (which is not defined as a configuration key)] exists, and if so then what? Stop and ask? Skip?",
+		"Checks that 'name', 'src', and 'guest_type' are defined at a minimum",
+		"Verifies that 'src' VM exists # TODO: determine how deeply is this checked",
+		"Ensures that 'src' VM’s defined guest os identifier is set in vSphere",
+		"… TODO: finish this section/text off …"
+	]
+	width = shutil.get_terminal_size().columns
+	print(banner)
+	print(textwrap.fill(disclaimer, width=width, expand_tabs=False))
+	print('')
+	print(textwrap.fill(overview, width=width, expand_tabs=False))
+	print('')
+	print('STEPS:\n')
+	for i, step in enumerate(steps):
+		print('{:2d}. {}'.format(i, textwrap.fill(step, width=width, expand_tabs=False)))
+	print('')
+	if input("Do You Want To Continue? [yes/N] ") == "yes":
+		main()
